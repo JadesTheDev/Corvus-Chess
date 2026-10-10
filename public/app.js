@@ -25,6 +25,12 @@ const retryBtn = $('retryBtn');
 const fileCoords = $('fileCoords');
 const statusDot = $('statusDot');
 const thinkingIndicator = $('thinkingIndicator');
+const archiveList = $('archiveList');
+const archiveState = $('archiveState');
+const archiveDialog = $('archiveDialog');
+const archiveDialogTitle = $('archiveDialogTitle');
+const archiveDialogMeta = $('archiveDialogMeta');
+const archiveDialogMoves = $('archiveDialogMoves');
 
 const pieces = {
   wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
@@ -35,6 +41,17 @@ const PLACEMENT_GAMES = 5;
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const round100 = (n) => Math.round(n / 100) * 100;
 
+function persistentId(key) {
+  let value = localStorage.getItem(key);
+  if (!value) {
+    value = crypto.randomUUID();
+    localStorage.setItem(key, value);
+  }
+  return value;
+}
+
+const installationId = persistentId('corvusChessInstallationId');
+let currentGameId = crypto.randomUUID();
 let game = new Chess();
 let humanColor = 'w';
 let selected = null;
@@ -44,7 +61,10 @@ let lastQuip = 'Your move, bird.';
 let lastMove = null;
 let retryAvailable = false;
 let resultRecorded = false;
+let archiveRecorded = false;
+let archiveConfigured = true;
 let placement = loadPlacement();
+let archivedGames = [];
 
 function loadPlacement() {
   try {
@@ -80,25 +100,128 @@ function eloLabel(rating) {
   return 'Very strong';
 }
 
+function gameResult() {
+  if (!game.isGameOver()) return { result: null, label: null };
+  if (game.isCheckmate()) {
+    const humanWon = game.turn() !== humanColor;
+    return { result: humanWon ? 'win' : 'loss', label: humanWon ? 'Lastivka won' : 'Corvus won' };
+  }
+  return { result: 'draw', label: 'Draw' };
+}
+
+function verboseHistory() {
+  return game.history({ verbose: true });
+}
+
+async function syncGame(complete = false) {
+  if (!archiveConfigured) return;
+  const verbose = verboseHistory();
+  const { result, label } = complete ? gameResult() : { result: null, label: null };
+  try {
+    const response = await fetch('/api/games', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gameId: currentGameId,
+        installationId,
+        humanName: 'Lastivka',
+        humanColor,
+        opponentElo: currentOpponentRating(),
+        estimatedElo: placement.complete || placement.active ? placement.rating : null,
+        placementGame: placement.active || resultRecorded,
+        status: complete ? 'complete' : 'active',
+        result,
+        resultLabel: label,
+        fen: game.fen(),
+        pgn: game.pgn(),
+        sanMoves: game.history(),
+        uciMoves: verbose.map((m) => `${m.from}${m.to}${m.promotion || ''}`)
+      })
+    });
+    const data = await response.json();
+    if (response.status === 503 && data.configured === false) {
+      archiveConfigured = false;
+      archiveState.textContent = 'Setup needed';
+      archiveList.innerHTML = '<p class="empty">Database is ready in the code; connect Supabase to turn on cloud history.</p>';
+      return;
+    }
+    if (!response.ok) throw new Error(data.error || 'Archive sync failed.');
+    archiveState.textContent = complete ? 'Saved' : 'Syncing';
+    if (complete) await loadArchive();
+  } catch (error) {
+    console.warn(error);
+    archiveState.textContent = 'Offline';
+  }
+}
+
+async function loadArchive() {
+  if (!archiveConfigured) return;
+  try {
+    const response = await fetch(`/api/games?installationId=${encodeURIComponent(installationId)}`);
+    const data = await response.json();
+    if (response.status === 503 && data.configured === false) {
+      archiveConfigured = false;
+      archiveState.textContent = 'Setup needed';
+      archiveList.innerHTML = '<p class="empty">Connect Supabase and your completed games will live here.</p>';
+      return;
+    }
+    if (!response.ok) throw new Error(data.error || 'Could not load archive.');
+    archivedGames = (data.games || []).filter((g) => g.status === 'complete');
+    renderArchive();
+  } catch (error) {
+    console.warn(error);
+    archiveState.textContent = 'Offline';
+    archiveList.innerHTML = '<p class="empty">Archive temporarily unavailable.</p>';
+  }
+}
+
+function renderArchive() {
+  archiveState.textContent = `${archivedGames.length} saved`;
+  archiveList.innerHTML = '';
+  if (!archivedGames.length) {
+    archiveList.innerHTML = '<p class="empty">No finished battles yet.</p>';
+    return;
+  }
+  for (const saved of archivedGames.slice(0, 12)) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'archive-game';
+    const date = saved.completed_at ? new Date(saved.completed_at).toLocaleDateString() : 'Past game';
+    const moves = Array.isArray(saved.san_moves) ? saved.san_moves.length : 0;
+    btn.innerHTML = `<span class="archive-result ${saved.result || ''}">${saved.result_label || 'Game'}</span><span>${date} · ${moves} moves</span><span>vs ${saved.opponent_elo} Elo</span>`;
+    btn.addEventListener('click', () => openArchivedGame(saved));
+    archiveList.appendChild(btn);
+  }
+}
+
+function openArchivedGame(saved) {
+  archiveDialogTitle.textContent = saved.result_label || 'Past game';
+  const date = saved.completed_at ? new Date(saved.completed_at).toLocaleString() : '';
+  archiveDialogMeta.textContent = `${date} · You played ${saved.human_color === 'w' ? 'White' : 'Black'} · Corvus ${saved.opponent_elo} Elo`;
+  const moves = Array.isArray(saved.san_moves) ? saved.san_moves : [];
+  archiveDialogMoves.innerHTML = '';
+  if (!moves.length) archiveDialogMoves.textContent = 'No moves stored.';
+  for (let i = 0; i < moves.length; i += 2) {
+    const row = document.createElement('div');
+    row.className = 'archive-move-row';
+    row.innerHTML = `<span>${i / 2 + 1}.</span><span>${moves[i] || ''}</span><span>${moves[i + 1] || ''}</span>`;
+    archiveDialogMoves.appendChild(row);
+  }
+  archiveDialog.showModal();
+}
+
 function recordPlacementResult() {
   if (resultRecorded || !placement.active || !game.isGameOver()) return;
   resultRecorded = true;
-
   let score = 0.5;
-  if (game.isCheckmate()) {
-    const loser = game.turn();
-    score = loser === humanColor ? 0 : 1;
-  }
-
+  if (game.isCheckmate()) score = game.turn() === humanColor ? 0 : 1;
   const opponent = currentOpponentRating();
   const expected = eloExpected(placement.rating, opponent);
-  const k = 160;
-  placement.rating = clamp(Math.round(placement.rating + k * (score - expected)), 400, 2600);
+  placement.rating = clamp(Math.round(placement.rating + 160 * (score - expected)), 400, 2600);
   placement.games += 1;
   if (score === 1) placement.wins += 1;
   else if (score === 0) placement.losses += 1;
   else placement.draws += 1;
-
   if (placement.games >= PLACEMENT_GAMES) {
     placement.active = false;
     placement.complete = true;
@@ -117,8 +240,11 @@ function squareOrder() {
 
 function render() {
   recordPlacementResult();
+  if (game.isGameOver() && !archiveRecorded) {
+    archiveRecorded = true;
+    syncGame(true);
+  }
   boardEl.innerHTML = '';
-
   for (const square of squareOrder()) {
     const file = square.charCodeAt(0) - 97;
     const rank = Number(square[1]) - 1;
@@ -126,14 +252,11 @@ function render() {
     el.type = 'button';
     el.className = `square ${(file + rank) % 2 ? 'light' : 'dark'}`;
     el.setAttribute('aria-label', square);
-
     if (selected === square) el.classList.add('selected');
     if (lastMove?.from === square) el.classList.add('last-from');
     if (lastMove?.to === square) el.classList.add('last-to');
-
     const target = legalTargets.find((move) => move.to === square);
     if (target) el.classList.add(target.captured ? 'capture' : 'legal');
-
     const piece = game.get(square);
     if (piece) {
       const span = document.createElement('span');
@@ -141,11 +264,9 @@ function render() {
       span.textContent = pieces[piece.color + piece.type];
       el.appendChild(span);
     }
-
     el.addEventListener('click', () => onSquareClick(square));
     boardEl.appendChild(el);
   }
-
   const files = humanColor === 'w' ? 'abcdefgh' : 'hgfedcba';
   fileCoords.innerHTML = [...files].map((file) => `<span>${file}</span>`).join('');
   renderHistory();
@@ -158,13 +279,11 @@ function renderRating() {
   aiRatingLabel.textContent = `${opponent} Elo`;
   placementProgress.textContent = `${placement.games} / ${PLACEMENT_GAMES} games`;
   placementFill.style.width = `${Math.min(100, placement.games / PLACEMENT_GAMES * 100)}%`;
-
   if (placement.complete) {
-    const spread = 100;
     ratingBadge.textContent = `${placement.rating}`;
     humanRatingLabel.textContent = `~${placement.rating} Elo`;
     ratingText.textContent = `Estimated Elo: ${placement.rating} · ${eloLabel(placement.rating)}. Record: ${placement.wins}-${placement.draws}-${placement.losses}.`;
-    ratingRange.textContent = `~${clamp(placement.rating - spread, 100, 3000)}–${placement.rating + spread}`;
+    ratingRange.textContent = `~${clamp(placement.rating - 100, 100, 3000)}–${placement.rating + 100}`;
     placementBtn.textContent = 'Retake placement';
   } else if (placement.active) {
     const spread = Math.max(150, 350 - placement.games * 45);
@@ -190,9 +309,7 @@ function renderHistory() {
     return;
   }
   let html = '';
-  for (let i = 0; i < history.length; i += 2) {
-    html += `<div class="move-row"><span>${i / 2 + 1}.</span><span>${history[i] || ''}</span><span>${history[i + 1] || ''}</span></div>`;
-  }
+  for (let i = 0; i < history.length; i += 2) html += `<div class="move-row"><span>${i / 2 + 1}.</span><span>${history[i] || ''}</span><span>${history[i + 1] || ''}</span></div>`;
   moveListEl.innerHTML = html;
   moveListEl.scrollTop = moveListEl.scrollHeight;
 }
@@ -207,13 +324,11 @@ function renderStatus() {
   retryBtn.hidden = !retryAvailable;
   retryBtn.disabled = thinking;
   thinkingIndicator.classList.toggle('on', thinking);
-
   let status;
   if (game.isCheckmate()) status = `${game.turn() === 'w' ? 'White' : 'Black'} is checkmated.`;
   else if (game.isDraw()) status = 'Draw.';
   else if (game.isCheck()) status = `${game.turn() === 'w' ? 'White' : 'Black'} is in check.`;
   else status = `${game.turn() === 'w' ? 'White' : 'Black'} to move.`;
-
   statusText.textContent = status;
   turnPill.textContent = game.isGameOver() ? 'Game over' : thinking ? 'Corvus is thinking…' : humanTurn ? 'Your move' : 'Corvus to move';
   statusDot.classList.toggle('danger', game.isCheck());
@@ -262,6 +377,7 @@ async function onSquareClick(square) {
   retryAvailable = false;
   lastQuip = 'Hm. Okay. I see what you’re doing.';
   render();
+  syncGame(false);
   if (!game.isGameOver()) await corvusMove();
 }
 
@@ -274,12 +390,7 @@ async function corvusMove() {
     const response = await fetch('/api/move', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fen: game.fen(),
-        history: game.history(),
-        humanName: 'Lastivka',
-        targetElo: currentOpponentRating()
-      })
+      body: JSON.stringify({ fen: game.fen(), history: game.history(), humanName: 'Lastivka', targetElo: currentOpponentRating() })
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Corvus could not move.');
@@ -288,6 +399,7 @@ async function corvusMove() {
     game.move({ from, to, promotion: data.move[4] });
     lastMove = { from, to };
     lastQuip = data.quip || `I played ${data.san}.`;
+    syncGame(false);
   } catch (error) {
     retryAvailable = true;
     lastQuip = `Tiny server gremlin: ${error.message}`;
@@ -298,14 +410,17 @@ async function corvusMove() {
 }
 
 function resetGame() {
+  currentGameId = crypto.randomUUID();
   game = new Chess();
   clearSelection();
   thinking = false;
   retryAvailable = false;
   resultRecorded = false;
+  archiveRecorded = false;
   lastMove = null;
   lastQuip = humanColor === 'w' ? 'Your move, bird.' : 'I get first blood this time.';
   render();
+  syncGame(false);
   if (humanColor === 'b') corvusMove();
 }
 
@@ -315,7 +430,6 @@ placementBtn.addEventListener('click', () => {
   lastQuip = 'Five games. No take-backs. Let’s find out what you’re made of.';
   resetGame();
 });
-
 newGameBtn.addEventListener('click', resetGame);
 swapBtn.addEventListener('click', () => { humanColor = humanColor === 'w' ? 'b' : 'w'; resetGame(); });
 undoBtn.addEventListener('click', () => {
@@ -323,7 +437,9 @@ undoBtn.addEventListener('click', () => {
   game.undo(); game.undo(); clearSelection(); retryAvailable = false; lastMove = null;
   lastQuip = 'Fine. We pretend those two moves never happened.';
   render();
+  syncGame(false);
 });
 retryBtn.addEventListener('click', corvusMove);
 
 render();
+loadArchive();
