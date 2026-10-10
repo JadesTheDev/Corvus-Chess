@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1018" />
+  <title>Corvus Chess</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">CORVUS CHESS</p>
+        <h1>Corbie <span>vs.</span> Corvus</h1>
+        <p class="subtitle">A tiny midnight chess table for one human and one suspiciously opinionated crow.</p>
+      </div>
+      <div class="turn-pill" id="turnPill">Your move</div>
+    </header>
+
+    <section class="game-layout">
+      <div class="board-column">
+        <div class="player-row top-player">
+          <div class="avatar corvus">C</div>
+          <div class="player-copy">
+            <strong>Corvus</strong>
+            <small id="aiColor">Black</small>
+          </div>
+          <div class="thinking-indicator" id="thinkingIndicator" aria-hidden="true"><span></span><span></span><span></span></div>
+        </div>
+
+        <div class="board-frame">
+          <div class="board" id="board" aria-label="Chess board"></div>
+        </div>
+        <div class="coords files" id="fileCoords"></div>
+
+        <div class="player-row bottom-player">
+          <div class="avatar corbie">L</div>
+          <div class="player-copy">
+            <strong>Lastivka</strong>
+            <small id="humanColor">White</small>
+          </div>
+        </div>
+      </div>
+
+      <aside class="side-panel">
+        <section class="card status-card">
+          <div class="card-heading">
+            <span>Board state</span>
+            <span id="statusDot" class="dot"></span>
+          </div>
+          <p id="statusText">White to move.</p>
+          <div class="corvus-says" id="corvusSays">Corvus: “Your move, bird.”</div>
+        </section>
+
+        <section class="card controls-card">
+          <div class="controls">
+            <button id="newGameBtn" class="primary">New game</button>
+            <button id="swapBtn">Swap colors</button>
+            <button id="undoBtn">Undo pair</button>
+            <button id="retryBtn" class="retry" hidden>Retry Corvus</button>
+          </div>
+          <p class="hint">Tap one of your pieces, then tap a glowing destination.</p>
+        </section>
+
+        <details class="card history-card">
+          <summary>
+            <span>Move history</span>
+            <span id="moveCount">0 moves</span>
+          </summary>
+          <div class="move-list" id="moveList"><p class="empty">No bloodshed yet.</p></div>
+        </details>
+      </aside>
+    </section>
+  </main>
+
+  <dialog id="promotionDialog">
+    <form method="dialog">
+      <h3>Promote pawn to…</h3>
+      <div class="promotion-buttons">
+        <button value="q">♛ <span>Queen</span></button>
+        <button value="r">♜ <span>Rook</span></button>
+        <button value="b">♝ <span>Bishop</span></button>
+        <button value="n">♞ <span>Knight</span></button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
