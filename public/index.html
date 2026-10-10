@@ -24,7 +24,7 @@
           <div class="avatar corvus">C</div>
           <div class="player-copy">
             <strong>Corvus</strong>
-            <small id="aiColor">Black</small>
+            <small><span id="aiColor">Black</span> · <span id="aiRating">1000 Elo</span></small>
           </div>
           <div class="thinking-indicator" id="thinkingIndicator" aria-hidden="true"><span></span><span></span><span></span></div>
         </div>
@@ -38,12 +38,21 @@
           <div class="avatar corbie">L</div>
           <div class="player-copy">
             <strong>Lastivka</strong>
-            <small id="humanColor">White</small>
+            <small><span id="humanColor">White</span> · <span id="humanRating">Unrated</span></small>
           </div>
         </div>
       </div>
 
       <aside class="side-panel">
+        <section class="card rating-card">
+          <div class="card-heading"><span>What’s my Elo?</span><span class="rating-badge" id="ratingBadge">Unrated</span></div>
+          <p id="ratingText">Play a 5-game placement set and Corvus will estimate your rating.</p>
+          <div class="placement-track"><div id="placementFill"></div></div>
+          <div class="rating-meta"><span id="placementProgress">0 / 5 games</span><span id="ratingRange">—</span></div>
+          <button id="placementBtn" class="placement-btn">Start placement</button>
+          <p class="rating-note">This is an app estimate, not an official FIDE/US Chess rating.</p>
+        </section>
+
         <section class="card status-card">
           <div class="card-heading">
             <span>Board state</span>
