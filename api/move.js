@@ -21,6 +21,16 @@ function legalUciMoves(chess) {
   return chess.moves({ verbose: true }).map((move) => `${move.from}${move.to}${move.promotion || ''}`);
 }
 
+function strengthGuide(elo) {
+  if (elo <= 700) return 'Play like a beginner: favor obvious legal moves, miss many tactics, and occasionally make harmless strategic mistakes. Do not intentionally hang the queen every game.';
+  if (elo <= 1000) return 'Play like a developing casual player: know basic development and captures, but miss tactics and positional ideas fairly often.';
+  if (elo <= 1300) return 'Play like an improving club player: use basic opening principles and simple tactics, but make noticeable inaccuracies.';
+  if (elo <= 1600) return 'Play like a competent club player: calculate short tactics, value king safety and development, but still make occasional positional or tactical errors.';
+  if (elo <= 1900) return 'Play strong club chess: calculate carefully, punish obvious mistakes, and make relatively few unforced errors.';
+  if (elo <= 2200) return 'Play expert-strength chess: be tactically sharp, positionally sound, and difficult to beat.';
+  return 'Play as strongly as you reasonably can: calculate deeply, choose principled moves, and punish inaccuracies.';
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -32,7 +42,7 @@ export default async function handler(req, res) {
       return res.status(503).json({ error: 'OPENAI_API_KEY is not configured on the server.' });
     }
 
-    const { fen, history = [], humanName = 'Lastivka' } = req.body || {};
+    const { fen, history = [], humanName = 'Lastivka', targetElo = 1000 } = req.body || {};
     if (typeof fen !== 'string') {
       return res.status(400).json({ error: 'Missing FEN.' });
     }
@@ -42,6 +52,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'The game is already over.' });
     }
 
+    const requestedElo = Math.max(600, Math.min(2400, Number(targetElo) || 1000));
     const legal = legalUciMoves(chess);
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const model = process.env.OPENAI_MODEL || 'gpt-6-luna';
@@ -51,9 +62,10 @@ export default async function handler(req, res) {
       const response = await client.responses.create({
         model,
         instructions: [
-          'You are Corvus, playing a friendly but genuinely competitive chess game against Lastivka.',
+          `You are Corvus, playing a friendly chess game against ${humanName}.`,
+          `Your target playing strength is approximately ${requestedElo} Elo. ${strengthGuide(requestedElo)}`,
           'Choose exactly one move from the supplied legal move list.',
-          'Play to win using sensible chess strategy, tactics, development, king safety, and endgame principles.',
+          'Do not claim the rating is official or precisely calibrated; it is an in-app approximation.',
           'Return ONLY compact JSON with exactly two keys: move and quip.',
           'move must be UCI notation such as e7e5 or e7e8q and MUST appear verbatim in the legal list.',
           'quip is one short natural sentence reacting to the position or the opponent move. Keep it playful, dry, and never mean.',
@@ -61,6 +73,7 @@ export default async function handler(req, res) {
         ].join(' '),
         input: JSON.stringify({
           opponent: humanName,
+          target_elo: requestedElo,
           position_fen: chess.fen(),
           side_to_move: chess.turn() === 'w' ? 'white' : 'black',
           recent_san_history: history.slice(-40),
@@ -85,7 +98,8 @@ export default async function handler(req, res) {
         move: candidate.move,
         san: made.san,
         quip: candidate.quip,
-        fen: chess.fen()
+        fen: chess.fen(),
+        targetElo: requestedElo
       });
     }
 
