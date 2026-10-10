@@ -16,18 +16,7 @@
 
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;touch-action:manipulation}
-body{
-  margin:0;
-  min-height:100vh;
-  min-height:100dvh;
-  background:
-    radial-gradient(circle at 18% -10%,rgba(114,217,201,.13),transparent 30%),
-    radial-gradient(circle at 88% 4%,rgba(168,144,255,.13),transparent 28%),
-    linear-gradient(180deg,#0e121b,var(--bg) 58%);
-  color:var(--text);
-  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  overscroll-behavior-y:none;
-}
+body{margin:0;min-height:100vh;min-height:100dvh;background:radial-gradient(circle at 18% -10%,rgba(114,217,201,.13),transparent 30%),radial-gradient(circle at 88% 4%,rgba(168,144,255,.13),transparent 28%),linear-gradient(180deg,#0e121b,var(--bg) 58%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overscroll-behavior-y:none}
 button{font:inherit}
 .app-shell{width:min(1160px,94vw);margin:0 auto;padding:36px 0 56px}
 .hero{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:24px}
@@ -58,6 +47,14 @@ h1 span{color:#7f899b;font-weight:500}
 .side-panel{display:grid;gap:14px;position:sticky;top:18px}
 .card{background:linear-gradient(180deg,rgba(27,36,52,.96),rgba(18,24,37,.96));border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:17px;box-shadow:0 16px 50px rgba(0,0,0,.2);backdrop-filter:blur(8px)}
 .card-heading,summary{display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:850}.dot{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 14px var(--teal)}.dot.danger{background:var(--danger);box-shadow:0 0 14px var(--danger)}
+.rating-card{border-color:rgba(114,217,201,.18)}
+.rating-card p{color:var(--muted);line-height:1.42}.rating-card>p{margin:10px 0}
+.rating-badge{font-size:.78rem;padding:5px 8px;border-radius:999px;background:rgba(114,217,201,.1);color:var(--teal);border:1px solid rgba(114,217,201,.2)}
+.placement-track{height:9px;border-radius:999px;background:#0e1420;overflow:hidden;border:1px solid rgba(255,255,255,.06);margin:13px 0 7px}
+.placement-track>div{height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--violet));transition:width .25s ease}
+.rating-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:.78rem;margin-bottom:11px}
+.placement-btn{width:100%;min-height:44px;border-radius:12px;border:1px solid rgba(114,217,201,.25);background:linear-gradient(135deg,#1b4d49,#312f57);color:var(--text);font-weight:850;padding:10px 12px}
+.rating-note{font-size:.72rem!important;margin-bottom:0!important;color:#778396!important}
 .status-card>p{color:var(--muted);margin:12px 0}.corvus-says{padding:14px;border-left:3px solid var(--violet);border-radius:9px;background:rgba(168,144,255,.08);line-height:1.45}
 .controls{display:grid;grid-template-columns:1fr 1fr;gap:9px}.controls button{min-height:44px;border:1px solid rgba(255,255,255,.11);border-radius:12px;background:#171e2c;color:var(--text);padding:11px 12px;font-weight:780;cursor:pointer}.controls .primary{grid-column:1/-1;background:linear-gradient(135deg,#245d57,#39375f);border-color:rgba(114,217,201,.28)}.controls .retry{grid-column:1/-1;border-color:rgba(237,133,133,.28);color:#ffd0d0}.controls button:disabled{opacity:.43;cursor:not-allowed}.hint{margin:11px 2px 0;color:var(--muted);font-size:.84rem;line-height:1.4}
 .history-card summary{cursor:pointer;list-style:none}.history-card summary::-webkit-details-marker{display:none}.move-list{margin-top:12px;max-height:330px;overflow:auto;display:grid;gap:3px}.move-row{display:grid;grid-template-columns:36px 1fr 1fr;gap:7px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,.05)}.move-row span:first-child{color:var(--muted)}.empty{color:var(--muted);margin:6px 0 0}
@@ -68,5 +65,5 @@ dialog{width:min(360px,88vw);background:#171e2c;color:var(--text);border:1px sol
   .hero{gap:9px;margin-bottom:8px}.eyebrow{font-size:.62rem;margin-bottom:4px}h1{font-size:clamp(2rem,11.5vw,3.15rem)}.subtitle{font-size:.86rem;margin-top:7px;line-height:1.36}.turn-pill{padding:7px 10px;font-size:.82rem}
   .game-layout{gap:7px}.player-row{padding:7px 2px}.avatar{width:31px;height:31px;border-radius:10px}.player-copy strong{font-size:.92rem}.player-copy small{font-size:.75rem}
   .board-frame{padding:4px;border-radius:14px}.board{border-radius:10px}.piece{font-size:clamp(2rem,10.7vw,3.55rem)}.square.selected{box-shadow:inset 0 0 0 3px var(--gold)}.square.capture::after{inset:7%;border-width:3px}.files{padding-top:3px;font-size:.61rem}
-  .side-panel{gap:8px}.card{padding:12px;border-radius:14px}.status-card>p{margin:8px 0;font-size:.88rem}.corvus-says{padding:10px;font-size:.89rem;line-height:1.38}.controls-card{padding:10px}.controls button{min-height:43px;padding:9px 8px;font-size:.88rem}.hint{font-size:.75rem;text-align:center;margin-top:8px}.history-card{padding:11px 12px}.history-card summary{font-size:.86rem}
+  .side-panel{gap:8px}.card{padding:12px;border-radius:14px}.status-card>p{margin:8px 0;font-size:.88rem}.corvus-says{padding:10px;font-size:.89rem;line-height:1.38}.controls-card{padding:10px}.controls button{min-height:43px;padding:9px 8px;font-size:.88rem}.hint{font-size:.75rem;text-align:center;margin-top:8px}.history-card{padding:11px 12px}.history-card summary{font-size:.86rem}.rating-card{padding:12px}.rating-card>p{font-size:.84rem}.placement-btn{min-height:43px}
 }
