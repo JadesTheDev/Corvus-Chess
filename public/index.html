@@ -79,6 +79,14 @@
           </summary>
           <div class="move-list" id="moveList"><p class="empty">No bloodshed yet.</p></div>
         </details>
+
+        <details class="card archive-card" open>
+          <summary>
+            <span>Past games</span>
+            <span id="archiveState">Checking…</span>
+          </summary>
+          <div class="archive-list" id="archiveList"><p class="empty">Looking for old battles…</p></div>
+        </details>
       </aside>
     </section>
   </main>
@@ -92,6 +100,16 @@
         <button value="b">♝ <span>Bishop</span></button>
         <button value="n">♞ <span>Knight</span></button>
       </div>
+    </form>
+  </dialog>
+
+  <dialog id="archiveDialog">
+    <form method="dialog" class="archive-dialog-form">
+      <button class="dialog-close" value="close" aria-label="Close">×</button>
+      <h3 id="archiveDialogTitle">Past game</h3>
+      <p id="archiveDialogMeta" class="archive-dialog-meta"></p>
+      <div id="archiveDialogMoves" class="archive-dialog-moves"></div>
+      <button class="dialog-done" value="close">Done</button>
     </form>
   </dialog>
 
